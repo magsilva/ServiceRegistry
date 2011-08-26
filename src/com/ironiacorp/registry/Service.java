@@ -26,6 +26,8 @@ public interface Service
 	URL getURL();
 	
 	Date getFirstSeenDate();
-	
+
 	Date getLastSeenDate();
+
+	void refresh();
 }

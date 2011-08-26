@@ -28,20 +28,25 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ironiacorp.network.InterfaceDiscoverer;
-import com.ironiacorp.network.protocol.slp.SLPServiceReplyMessage;
 import com.ironiacorp.network.protocol.slp.SLPServiceRequestMessage;
 import com.ironiacorp.network.protocol.slp.SLPServiceType;
-import com.ironiacorp.network.protocol.slp.SLPServiceURL;
 import com.ironiacorp.network.tool.listener.BroadcastListener;
 import com.ironiacorp.patterns.observer.Change;
 import com.ironiacorp.patterns.observer.ChangeSet;
 import com.ironiacorp.patterns.observer.ObjectChange;
 import com.ironiacorp.patterns.observer.ObservationSubject;
 import com.ironiacorp.patterns.observer.Observer;
+import com.ironiacorp.registry.services.CmapService;
+
 
 public class ServiceRegistry implements Observer
 {
+	private static Logger log = LoggerFactory.getLogger(ServiceRegistry.class);
+	
 	private List<BroadcastListener> listeners;
 	
 	private ConcurrentHashMap<URL, Service> services;
@@ -53,7 +58,7 @@ public class ServiceRegistry implements Observer
 	public ServiceRegistry()
 	{
 		listeners = new ArrayList<BroadcastListener>();
-		services = new ConcurrentHashMap<URL, Service>();
+		services = new ConcurrentHashMap<URL, Service>(10, 0.2f, 1);
 		ports = new TreeSet<Integer>();
 		guessBufferSize();
 	}
@@ -135,25 +140,55 @@ public class ServiceRegistry implements Observer
 						SLPServiceRequestMessage msg = new SLPServiceRequestMessage();
 						Iterator<InetAddress> addresses;
 						Iterator<SLPServiceType> serviceTypes;
+						Service service = null;
 						
 						msg.parse(data);
-						System.out.println("SUCCESS: " + packet.getLength() + msg.getFunction().toString());
-						addresses = msg.getAddresses().iterator();
 						serviceTypes = msg.getServiceTypes().iterator();
-						System.out.print("Services available :");
 						while (serviceTypes.hasNext()) {
 							SLPServiceType serviceType = serviceTypes.next();
-							System.out.print(serviceType.toString() + " ");
-						}
-						System.out.println();
-						while (addresses.hasNext()) {
-							InetAddress address = addresses.next();
-							System.out.println("\t" + address.toString());
+							addresses = msg.getAddresses().iterator();
+
+							while (addresses.hasNext()) {
+								InetAddress address = addresses.next();
+								try {
+									service = new CmapService(serviceType, address);
+									break;
+								} catch (Exception e) {
+								}
+							}
+							
+							if (service != null) {
+								if (services.containsKey(service.getURL())) {
+									log.info("Found registered service, refreshing: " + service);
+									service = services.get(service.getURL());
+									service.refresh();
+								} else {
+									log.info("Found new service: " + service);
+									services.put(service.getURL(), service);
+								}
+								service = null;
+							}
 						}
 					}
 				}
 			}
-			
 		}
+	}
+	
+	public Iterator<Service> getServices()
+	{
+		return services.values().iterator();
+	}
+	
+	public Iterator<Service> getServices(Class<? extends Service> serviceType)
+	{
+		List<Service> result = new ArrayList<Service>();
+		for (Service service : services.values()) {
+			if (service.getClass().equals(serviceType)) {
+				result.add(service);
+			}
+		}
+		
+		return result.iterator();
 	}
 }

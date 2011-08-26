@@ -14,14 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+package com.ironiacorp.registry.services;
 
-package com.ironiacorp.registry;
+import static org.junit.Assert.*;
 
-import com.ironiacorp.network.tool.listener.BroadcastListener;
+import java.net.InetAddress;
+import java.net.URL;
 
-public class SlpServiceDiscoverer
+import org.junit.Test;
+
+import com.ironiacorp.network.protocol.slp.SLPServiceType;
+
+public class CmapServiceTest
 {
-	private BroadcastListener listener;
-	
-	
+	@Test
+	public void testCmapServiceSLPServiceTypeInetAddress() throws Exception
+	{
+		URL endPoint = new URL("http://10.6.208.1:10888/services/CmapWebService");
+		SLPServiceType serviceType = new SLPServiceType("cmapV3");
+		CmapService service = new CmapService(serviceType, InetAddress.getByName("10.6.208.1"));
+		assertEquals(endPoint, service.getURL());
+	}
 }

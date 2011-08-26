@@ -18,7 +18,11 @@ package com.ironiacorp.registry;
 
 import static org.junit.Assert.*;
 
+import java.util.Iterator;
+
 import org.junit.Test;
+
+import com.ironiacorp.registry.services.CmapService;
 
 public class ServiceRegistryTest
 {
@@ -31,7 +35,11 @@ public class ServiceRegistryTest
 		registry.addPort(4747);
 		registry.start();
 		while (true) {
-			Thread.sleep(200);
+			Thread.sleep(2000);
+			Iterator<Service> services = registry.getServices(CmapService.class);
+			while (services.hasNext()) {
+				System.out.println(services.next().toString());
+			}
 		}
 	}
 
